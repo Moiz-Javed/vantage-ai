@@ -1,0 +1,58 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+:root {
+  /* Dark theme (default) — deep indigo-navy, not pure black */
+  --bg: #0b1120;
+  --bg-elevated: #121a2e;
+  --bg-elevated-2: #182238;
+  --border: #23304a;
+  --text: #e7eaf3;
+  --text-muted: #94a3c4;
+  --accent: #4cc9c0;      /* signal teal — AI/active states */
+  --accent-2: #6c7bff;    /* violet-blue — secondary accent */
+  --accent-warm: #f2a65a; /* amber — voice recording pulse only */
+  --danger: #f2685a;
+}
+
+[data-theme="light"] {
+  --bg: #f7f8fc;
+  --bg-elevated: #ffffff;
+  --bg-elevated-2: #eef1f9;
+  --border: #dbe1f0;
+  --text: #131a2c;
+  --text-muted: #5b6685;
+  --accent: #0f9c92;
+  --accent-2: #4f5fe0;
+  --accent-warm: #d9822b;
+  --danger: #d9483a;
+}
+
+* {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
