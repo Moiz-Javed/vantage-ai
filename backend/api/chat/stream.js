@@ -1,27 +1,26 @@
-import express from "express";
-import Conversation from "../models/Conversation.js";
-import { streamChat, PERSONA_IDS } from "../services/gemini.js";
-import { retrieveRelevantChunks } from "../services/rag.js";
-import { requireUser, getUserId } from "../middleware/auth.js";
+import { applyCors, sendError } from "../../lib/cors.js";
+import { requireUserId } from "../../lib/auth.js";
+import { connectDB } from "../../config/db.js";
+import Conversation from "../../models/Conversation.js";
+import { streamChat } from "../../services/gemini.js";
+import { retrieveRelevantChunks } from "../../services/rag.js";
 
-const router = express.Router();
+export default async function handler(req, res) {
+  if (applyCors(req, res)) return;
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-/** GET /api/chat/personas — the list of assistant tones the UI can offer. */
-router.get("/personas", (_req, res) => res.json(PERSONA_IDS));
+  let userId;
+  try {
+    userId = await requireUserId(req);
+    await connectDB();
+  } catch (err) {
+    return sendError(res, err);
+  }
 
-/**
- * POST /api/chat/stream
- * body: {
- *   conversationId?, message, useDocument?, persona?,
- *   regenerate?,          // re-run the last assistant reply, no new user message
- *   editMessageIndex?,    // truncate history to this index, replace with `message`, continue
- * }
- * Streams the assistant's reply as Server-Sent Events, then saves both the
- * user message and the full assistant reply to Mongo once streaming ends.
- */
-router.post("/stream", requireUser, async (req, res) => {
-  const userId = getUserId(req);
-  const { conversationId, message, useDocument, persona, regenerate, editMessageIndex } = req.body;
+  const { conversationId, message, useDocument, persona, regenerate, editMessageIndex } =
+    req.body || {};
 
   if (!regenerate && (!message || !message.trim())) {
     return res.status(400).json({ error: "message is required" });
@@ -30,7 +29,7 @@ router.post("/stream", requireUser, async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
+  res.flushHeaders?.();
 
   try {
     let conversation = conversationId
@@ -49,22 +48,16 @@ router.post("/stream", requireUser, async (req, res) => {
     if (persona) conversation.persona = persona;
 
     if (regenerate) {
-      // Drop the most recent assistant reply so we can re-generate it from
-      // the same conversation state (the last message should be "user").
       if (conversation.messages[conversation.messages.length - 1]?.role === "assistant") {
         conversation.messages.pop();
       }
     } else if (typeof editMessageIndex === "number") {
-      // User edited an earlier message — cut everything from that point
-      // forward and continue the conversation with the edited text.
       conversation.messages = conversation.messages.slice(0, editMessageIndex);
       conversation.messages.push({ role: "user", content: message });
     } else {
       conversation.messages.push({ role: "user", content: message });
     }
 
-    // If the user asked to use a document, pull the most relevant chunks
-    // and hand them to Gemini as grounding context.
     let context = null;
     const lastUserMessage = [...conversation.messages].reverse().find((m) => m.role === "user");
     if (useDocument && lastUserMessage) {
@@ -99,23 +92,4 @@ router.post("/stream", requireUser, async (req, res) => {
     res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
     res.end();
   }
-});
-
-/** GET /api/chat/conversations — list the user's past conversations (sidebar). */
-router.get("/conversations", requireUser, async (req, res) => {
-  const userId = getUserId(req);
-  const conversations = await Conversation.find({ userId })
-    .select("title createdAt updatedAt")
-    .sort({ updatedAt: -1 });
-  res.json(conversations);
-});
-
-/** GET /api/chat/conversations/:id — full message history for one conversation. */
-router.get("/conversations/:id", requireUser, async (req, res) => {
-  const userId = getUserId(req);
-  const conversation = await Conversation.findOne({ _id: req.params.id, userId });
-  if (!conversation) return res.status(404).json({ error: "Not found" });
-  res.json(conversation);
-});
-
-export default router;
+}

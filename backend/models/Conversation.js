@@ -4,8 +4,6 @@ const messageSchema = new mongoose.Schema(
   {
     role: { type: String, enum: ["user", "assistant"], required: true },
     content: { type: String, required: true },
-    // Set when the message referenced an uploaded image or PDF, so the UI
-    // can show a small attachment chip on the message bubble.
     attachment: {
       type: { type: String, enum: ["image", "pdf", null], default: null },
       name: String,
@@ -24,4 +22,7 @@ const conversationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Conversation", conversationSchema);
+// Prevent "OverwriteModelError" when a warm serverless instance re-imports
+// this module — reuse the existing compiled model if it already exists.
+export default mongoose.models.Conversation ||
+  mongoose.model("Conversation", conversationSchema);

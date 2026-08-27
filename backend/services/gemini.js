@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const CHAT_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const CHAT_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const EMBED_MODEL = "gemini-embedding-001";
 
 const PERSONAS = {
@@ -25,15 +25,9 @@ function buildSystemInstruction(persona, context) {
 }
 
 /**
- * Streams a chat response chunk-by-chunk. `onChunk` is called with each
- * piece of text as it arrives from Gemini — the route handler forwards
- * these straight to the client over Server-Sent Events.
- *
- * `history` is an array of {role: "user"|"assistant", content} — mapped to
- * Gemini's {role: "user"|"model", parts} shape here.
- * `context` is optional extra text (e.g. retrieved PDF chunks) prepended as
- * a system-style instruction so the model grounds its answer in it.
- * `persona` picks the assistant's tone (see PERSONAS above).
+ * Streams a chat response chunk-by-chunk via onChunk. `history` is an array
+ * of {role: "user"|"assistant", content}. `context` is optional retrieved
+ * PDF text. `persona` picks the assistant's tone (see PERSONAS above).
  */
 export async function streamChat({ history, context, persona, onChunk }) {
   const model = genAI.getGenerativeModel({
