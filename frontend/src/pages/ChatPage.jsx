@@ -33,6 +33,7 @@ export default function ChatPage() {
   const [persona, setPersona] = useState("friendly");
   const [handsFree, setHandsFree] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // mobile drawer state
   const dragCounter = useRef(0);
 
   const loadConversations = useCallback(async () => {
@@ -70,11 +71,6 @@ export default function ChatPage() {
     setActiveTitle("New conversation");
   };
 
-  /**
-   * Core send logic. `options.regenerate` re-runs the last assistant reply
-   * with no new user message; `options.editMessageIndex` truncates history
-   * at that point and continues from the edited text.
-   */
   const runStream = useCallback(
     async (text, options = {}) => {
       setError(null);
@@ -170,7 +166,6 @@ export default function ChatPage() {
     }
   };
 
-  // Drag-and-drop anywhere over the chat column — PDFs and images alike.
   const handleDragEnter = (e) => {
     e.preventDefault();
     dragCounter.current += 1;
@@ -194,12 +189,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="h-screen flex" style={{ background: "var(--bg)" }}>
+    <div className="h-screen flex overflow-hidden" style={{ background: "var(--bg)" }}>
       <Sidebar
         conversations={conversations}
         activeId={activeId}
         onSelect={handleSelectConversation}
         onNewChat={handleNewChat}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
       <div
         className="flex-1 flex flex-col min-w-0 relative"
@@ -213,7 +210,7 @@ export default function ChatPage() {
             className="absolute inset-0 z-20 flex items-center justify-center border-4 border-dashed pointer-events-none"
             style={{ background: "rgba(76,201,192,0.1)", borderColor: "var(--accent)" }}
           >
-            <p className="text-lg font-semibold" style={{ color: "var(--accent)" }}>
+            <p className="text-lg font-semibold text-center px-4" style={{ color: "var(--accent)" }}>
               Drop a PDF or image to upload
             </p>
           </div>
@@ -229,6 +226,7 @@ export default function ChatPage() {
           onToggleHandsFree={() => setHandsFree((h) => !h)}
           onExport={() => exportConversationAsMarkdown(activeTitle, messages)}
           canExport={messages.length > 0}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
         />
         <ChatWindow
           messages={messages}
@@ -238,7 +236,7 @@ export default function ChatPage() {
           onRegenerate={handleRegenerate}
           onSuggestion={handleSend}
         />
-        <div className="px-4 pb-4">
+        <div className="px-2 sm:px-4 pb-4">
           <div className="max-w-3xl mx-auto w-full">
             {error && (
               <p className="text-xs mb-2 px-1" style={{ color: "var(--danger)" }}>
